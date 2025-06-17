@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📝 User Feedback Viewer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a; color: #ffffff; padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { 
+            text-align: center; margin-bottom: 30px; padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+        }
+        .controls { 
+            display: flex; gap: 20px; margin-bottom: 30px; 
+            align-items: center; justify-content: center;
+        }
+        .btn { 
+            padding: 12px 24px; border: none; border-radius: 8px;
+            cursor: pointer; font-size: 16px; font-weight: bold;
+            background: #4CAF50; color: white; text-decoration: none;
+        }
+        .btn:hover { background: #45a049; }
+        .feedback-item { 
+            background: #2a2a2a; border-radius: 10px; padding: 20px;
+            margin-bottom: 20px; border-left: 4px solid #4CAF50;
+        }
+        .feedback-header { 
+            display: flex; justify-content: space-between; 
+            margin-bottom: 10px; font-size: 14px; color: #888;
+        }
+        .feedback-type { 
+            background: #333; padding: 4px 8px; border-radius: 4px;
+            color: #4CAF50; font-size: 12px;
+        }
+        .feedback-text { 
+            font-size: 16px; line-height: 1.5; margin: 10px 0;
+        }
+        .feedback-rating { 
+            color: #ffa500; font-weight: bold;
+        }
+        .loading { text-align: center; padding: 50px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📝 User Feedback Database Viewer</h1>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="loadFeedback()">🔄 Reload Feedback</button>
+            <a href="/" class="btn">🔙 Back to Main App</a>
+            <span id="feedbackCount">0 feedback entries</span>
+        </div>
+
+        <div id="feedbackContainer">
+            <div class="loading">📊 Loading feedback...</div>
+        </div>
+    </div>
+
+    <script>
+        async function loadFeedback() {
+            try {
+                document.getElementById('feedbackContainer').innerHTML = '<div class="loading">📊 Loading feedback...</div>';
+                
+                const response = await fetch('/api/view_all_feedback');
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayFeedback(data.feedbacks);
+                    document.getElementById('feedbackCount').textContent = `${data.count} feedback entries`;
+                } else {
+                    document.getElementById('feedbackContainer').innerHTML = 
+                        `<div class="feedback-item">❌ Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('feedbackContainer').innerHTML = 
+                    `<div class="feedback-item">❌ Error loading feedback: ${error}</div>`;
+            }
+        }
+
+        function displayFeedback(feedbacks) {
+            const container = document.getElementById('feedbackContainer');
+            
+            if (feedbacks.length === 0) {
+                container.innerHTML = '<div class="feedback-item">📭 No feedback submitted yet</div>';
+                return;
+            }
+
+            container.innerHTML = feedbacks.map(feedback => `
+                <div class="feedback-item">
+                    <div class="feedback-header">
+                        <div>
+                            <span class="feedback-type">${feedback.feedback_type}</span>
+                            <span>Frame: ${feedback.frame_number}</span>
+                            ${feedback.rating ? `<span class="feedback-rating">⭐ ${feedback.rating}/5</span>` : ''}
+                        </div>
+                        <div>${new Date(feedback.timestamp).toLocaleString()}</div>
+                    </div>
+                    <div class="feedback-text">${feedback.feedback_text}</div>
+                    ${feedback.user_corrections ? `<div style="margin-top: 10px; color: #888;"><strong>Corrections:</strong> ${feedback.user_corrections}</div>` : ''}
+                    ${feedback.video_file ? `<div style="margin-top: 5px; color: #666; font-size: 12px;">Video: ${feedback.video_file}</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        // Load feedback on page load
+        loadFeedback();
+    </script>
+</body>
+</html> 

@@ -1,0 +1,24 @@
+Dataset/
+STATUS.md
+__pycache__/
+results/classification_dataset/
+results/classification_model/
+results/classification_model_832
+results/classification_model_yolo11s-cls
+results/detection_model
+results/detection_model_832
+results/detection_model_yolo12s
+*.mp4
+environment.example
+dockersetup.txt
+README_DOCKER.md
+models/classification_model_832_best.pt
+models/detection_model_832_best.pt
+models/classification_model_best.pt
+models/detection_model_best.pt
+
+# Large model files
+models/
+*.pt
+*.db
+results/

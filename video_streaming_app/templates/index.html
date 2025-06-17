@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 Fast Web Streaming - Detection + Classification</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 30px;
+        }
+
+        .side-panel {
+            background: #2a2a2a;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .video-section {
+            background: #2a2a2a;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-stream {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #1976D2;
+            transform: translateY(-2px);
+        }
+
+        .btn-feedback {
+            background: #FF9800;
+            color: white;
+        }
+
+        .btn-feedback:hover {
+            background: #F57C00;
+            transform: translateY(-2px);
+        }
+
+        .btn-video {
+            background: #9C27B0;
+            color: white;
+        }
+
+        .btn-video:hover {
+            background: #7B1FA2;
+            transform: translateY(-2px);
+        }
+
+        .btn-video:disabled {
+            background: #666;
+            color: #999;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .seek-bar-container {
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+
+        .seek-bar {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #555;
+            outline: none;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+            cursor: pointer;
+        }
+
+        .seek-bar:hover {
+            opacity: 1;
+        }
+
+        .seek-bar::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .seek-bar::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .seek-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 12px;
+            color: #888;
+        }
+
+
+
+        .class-counts {
+            margin-top: 20px;
+        }
+
+        .class-counts h3 {
+            margin-bottom: 15px;
+            color: #4CAF50;
+        }
+
+        .class-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            margin: 5px 0;
+            background: #333;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            transition: filter 0.3s ease;
+        }
+
+        /* Class item text colors matching their detection colors */
+        .class-item.dish_empty .class-label { 
+            color: #00FFFF; /* Cyan */
+        }
+        .class-item.dish_kakigori .class-label { 
+            color: #ff4fff; /* Magenta */
+        }
+        .class-item.dish_not_empty .class-label { 
+            color: #00FF00; /* Green */
+        }
+        .class-item.tray_empty .class-label { 
+            color: #FFFF00; /* Yellow */
+        }
+        .class-item.tray_kakigori .class-label { 
+            color: #FFA500; /* Orange */
+        }
+        .class-item.tray_not_empty .class-label { 
+            color: #ec3434; /* Red */
+        }
+
+        /* Count colors matching their class colors */
+        .class-count.dish_empty { 
+            color: #00FFFF; /* Cyan */
+        }
+        .class-count.dish_kakigori { 
+            color: #ff4fff; /* Magenta */
+        }
+        .class-count.dish_not_empty { 
+            color: #00FF00; /* Green */
+        }
+        .class-count.tray_empty { 
+            color: #FFFF00; /* Yellow */
+        }
+        .class-count.tray_kakigori { 
+            color: #FFA500; /* Orange */
+        }
+        .class-count.tray_not_empty { 
+            color: #ec3434; /* Red */
+        }
+
+        .class-count {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 12px;
+            min-width: 20px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Blur effect when count is 0 */
+        .class-item.no-objects {
+            filter: blur(2px);
+            opacity: 0.6;
+        }
+
+        .info-panel {
+            margin-bottom: 20px;
+        }
+
+        .info-panel h3 {
+            margin-bottom: 10px;
+            color: #4CAF50;
+        }
+
+        .feedback-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #333;
+            border-radius: 8px;
+        }
+
+        .feedback-section h3 {
+            margin-bottom: 10px;
+            color: #FF9800;
+        }
+
+        .feedback-textarea {
+            width: 100%;
+            height: 80px;
+            background: #444;
+            color: white;
+            border: 1px solid #666;
+            border-radius: 5px;
+            padding: 8px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .feedback-submit {
+            width: 100%;
+            margin-top: 10px;
+            background: #FF9800;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .feedback-submit:hover {
+            background: #F57C00;
+        }
+
+        .metrics-section {
+            margin-top: 20px;
+        }
+
+        .metrics-section h3 {
+            margin-bottom: 15px;
+            color: #2196F3;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #444;
+        }
+
+        .metric-label {
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        .metric-value {
+            font-weight: bold;
+            color: #00ff00;
+        }
+
+        .models-info {
+            margin: 10px 0;
+        }
+
+        .model-line {
+            margin: 6px 0;
+            font-size: 14px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .model-label {
+            color: #aaa;
+            font-size: 13px;
+            margin-bottom: 2px;
+        }
+
+        .model-name {
+            color: #00ff00;
+            font-weight: bold;
+            font-size: 12px;
+            word-break: break-all;
+        }
+
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #888;
+            font-size: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #333;
+            border-top: 4px solid #4CAF50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .side-panel {
+                order: 2;
+            }
+            .video-section {
+                order: 1;
+            }
+        }
+
+        /* Video Selection Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+        }
+
+        .modal-content {
+            background-color: #333;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #555;
+            padding-bottom: 10px;
+        }
+
+        .modal-title {
+            color: #9C27B0;
+            margin: 0;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #fff;
+        }
+
+        .video-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .video-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin: 8px 0;
+            background: #444;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .video-item:hover {
+            background: #555;
+        }
+
+        .video-item.current {
+            background: #9C27B0;
+            color: white;
+        }
+
+        .video-info {
+            flex: 1;
+        }
+
+        .video-name {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .video-details {
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .video-size {
+            font-size: 12px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>REAL-TIME DISPATCH MONITORING SYSTEM</h1>
+            <p>By Pham Thanh Binh</p>
+        </div>
+
+
+
+        <div class="main-content">
+            <!-- Left Panel - Class Counts, Metrics & Feedback -->
+            <div class="side-panel">
+                <div class="class-counts">
+                    <h3>🎯 Current Detections</h3>
+                    <div class="class-item dish_empty" id="class-item-dish_empty">
+                        <span class="class-label">Dish Empty</span>
+                        <span class="class-count dish_empty" id="dish_empty">0</span>
+                    </div>
+                    <div class="class-item dish_kakigori" id="class-item-dish_kakigori">
+                        <span class="class-label">Dish Kakigori</span>
+                        <span class="class-count dish_kakigori" id="dish_kakigori">0</span>
+                    </div>
+                    <div class="class-item dish_not_empty" id="class-item-dish_not_empty">
+                        <span class="class-label">Dish Not Empty</span>
+                        <span class="class-count dish_not_empty" id="dish_not_empty">0</span>
+                    </div>
+                    <div class="class-item tray_empty" id="class-item-tray_empty">
+                        <span class="class-label">Tray Empty</span>
+                        <span class="class-count tray_empty" id="tray_empty">0</span>
+                    </div>
+                    <div class="class-item tray_kakigori" id="class-item-tray_kakigori">
+                        <span class="class-label">Tray Kakigori</span>
+                        <span class="class-count tray_kakigori" id="tray_kakigori">0</span>
+                    </div>
+                    <div class="class-item tray_not_empty" id="class-item-tray_not_empty">
+                        <span class="class-label">Tray Not Empty</span>
+                        <span class="class-count tray_not_empty" id="tray_not_empty">0</span>
+                    </div>
+                </div>
+
+                <!-- Metrics Section -->
+                <div class="metrics-section">
+                    <h3>📊 System Information</h3>
+                    <div class="models-info">
+                        <div class="model-line">
+                            <span class="model-label">Detection:</span>
+                            <span class="model-name" id="detectionModel-detail">Loading...</span>
+                        </div>
+                        <div class="model-line">
+                            <span class="model-label">Classification:</span>
+                            <span class="model-name" id="classificationModel-detail">Loading...</span>
+                        </div>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Status</span>
+                        <span class="metric-value" id="playbackStatus-detail">Playing</span>
+                    </div>
+                </div>
+
+                <!-- Feedback Section -->
+                <div class="feedback-section">
+                    <h3>💬 Send Feedback</h3>
+                    <textarea class="feedback-textarea" id="feedbackText" placeholder="Enter your feedback about current frame or detection..."></textarea>
+                    <button class="feedback-submit" onclick="submitFeedback()">📝 Submit Feedback</button>
+                    <div style="margin-top: 10px; text-align: center;">
+                        <a href="/feedback" class="btn btn-feedback" style="display: inline-block; text-decoration: none; font-size: 12px; padding: 8px 78px;">📊 View All Feedback</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Panel - Video -->
+            <div class="video-section">
+                <div class="video-container">
+                    <img src="/video_feed" alt="Video Stream" class="video-stream" id="video-stream">
+                </div>
+
+                <!-- Seek Bar -->
+                <div class="seek-bar-container">
+                    <input type="range" class="seek-bar" id="seekBar" min="0" max="100" value="0" oninput="seekToFrame()">
+                    <div class="seek-info">
+                        <span>Frame: <span id="currentFrame">0</span></span>
+                        <span>Total: <span id="totalFrames">0</span></span>
+                    </div>
+                </div>
+
+                <!-- Playback Controls -->
+                <div class="controls">
+                    <button class="btn btn-primary" id="playPauseBtn" onclick="togglePlayback()">⏸️ Pause</button>
+                    <button class="btn btn-video" id="videoSelectBtn" onclick="openVideoSelector()" disabled>🎬 Select Video</button>
+                    <span style="margin-left: 20px; color: #aaa;">Progress: <span id="progressPercent">0%</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Video Selection Modal -->
+    <div id="videoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">🎬 Select Video File</h3>
+                <span class="close" onclick="closeVideoSelector()">&times;</span>
+            </div>
+            <div class="video-list" id="videoList">
+                <div style="text-align: center; padding: 20px; color: #888;">
+                    <div class="spinner"></div>
+                    Loading videos...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isPlaying = true;
+        let totalFrames = 0;
+        let currentFrame = 0;
+
+        // Update stats and video info
+        function updateStats() {
+            fetch('/stats')
+                .then(response => response.json())
+                .then(data => {
+                    // Update model names
+                    fetch('/api/video/info')
+                        .then(response => response.json())
+                        .then(videoData => {
+                            if (videoData.success && videoData.processing_info) {
+                                const detectionModel = videoData.processing_info.detection_model.split('/').pop();
+                                const classificationModel = videoData.processing_info.classification_model.split('/').pop();
+                                document.getElementById('detectionModel-detail').textContent = detectionModel;
+                                document.getElementById('classificationModel-detail').textContent = classificationModel;
+                            }
+                        });
+
+                    // Update video info
+                    if (data.video_info) {
+                        totalFrames = data.video_info.total_frames;
+                        currentFrame = data.video_info.current_frame;
+                        isPlaying = data.video_info.is_playing;
+
+                        document.getElementById('totalFrames').textContent = totalFrames;
+                        document.getElementById('currentFrame').textContent = currentFrame;
+                        document.getElementById('playbackStatus-detail').textContent = isPlaying ? 'Playing' : 'Paused';
+                        
+                        // Update seek bar
+                        if (totalFrames > 0) {
+                            document.getElementById('seekBar').max = totalFrames - 1;
+                            document.getElementById('seekBar').value = currentFrame;
+                            document.getElementById('progressPercent').textContent = 
+                                ((currentFrame / totalFrames) * 100).toFixed(1) + '%';
+                        }
+
+                        // Update play/pause button
+                        document.getElementById('playPauseBtn').textContent = isPlaying ? '⏸️ Pause' : '▶️ Play';
+                        
+                        // Enable/disable seek bar
+                        document.getElementById('seekBar').disabled = isPlaying;
+                        
+                        // Enable/disable video selection button (only when paused)
+                        document.getElementById('videoSelectBtn').disabled = isPlaying;
+                    }
+
+                    // Update class counts
+                    if (data.class_counts) {
+                        Object.keys(data.class_counts).forEach(className => {
+                            const element = document.getElementById(className);
+                            const classItem = document.getElementById('class-item-' + className);
+                            if (element && classItem) {
+                                const count = data.class_counts[className];
+                                element.textContent = count;
+                                
+                                // Add or remove blur effect based on count
+                                if (count === 0) {
+                                    classItem.classList.add('no-objects');
+                                } else {
+                                    classItem.classList.remove('no-objects');
+                                }
+                            }
+                        });
+                    }
+                })
+                .catch(error => console.error('Error fetching stats:', error));
+        }
+
+        // Toggle playback
+        function togglePlayback() {
+            fetch('/api/toggle_playback', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        isPlaying = data.is_playing;
+                        document.getElementById('playPauseBtn').textContent = isPlaying ? '⏸️ Pause' : '▶️ Play';
+                        document.getElementById('playbackStatus-detail').textContent = isPlaying ? 'Playing' : 'Paused';
+                        document.getElementById('seekBar').disabled = isPlaying;
+                        document.getElementById('videoSelectBtn').disabled = isPlaying;
+                    }
+                })
+                .catch(error => console.error('Error toggling playback:', error));
+        }
+
+        // Seek to frame
+        function seekToFrame() {
+            if (!isPlaying) {  // Only allow seeking when paused
+                const frameNumber = parseInt(document.getElementById('seekBar').value);
+                fetch('/api/seek_to_frame', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ frame_number: frameNumber })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        currentFrame = frameNumber;
+                        document.getElementById('currentFrame').textContent = currentFrame;
+                        document.getElementById('progressPercent').textContent = 
+                            ((currentFrame / totalFrames) * 100).toFixed(1) + '%';
+                    }
+                })
+                .catch(error => console.error('Error seeking:', error));
+            }
+        }
+
+        // Submit feedback function
+        function submitFeedback() {
+            const feedbackText = document.getElementById('feedbackText').value.trim();
+            
+            if (!feedbackText) {
+                alert('Please enter some feedback text!');
+                return;
+            }
+
+            const feedbackData = {
+                frame_number: currentFrame,
+                feedback_type: 'user_feedback',
+                feedback_text: feedbackText,
+                video_file: 'testing_video.mp4'
+            };
+
+            fetch('/api/submit_feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(feedbackData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Feedback submitted successfully!');
+                    document.getElementById('feedbackText').value = '';
+                } else {
+                    alert('❌ Error submitting feedback: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting feedback:', error);
+                alert('❌ Error submitting feedback: ' + error);
+            });
+        }
+
+        // Video selection functions
+        function openVideoSelector() {
+            if (isPlaying) {
+                alert('Please pause the video first!');
+                return;
+            }
+            
+            document.getElementById('videoModal').style.display = 'block';
+            loadVideoList();
+        }
+
+        function closeVideoSelector() {
+            document.getElementById('videoModal').style.display = 'none';
+        }
+
+        function loadVideoList() {
+            document.getElementById('videoList').innerHTML = 
+                '<div style="text-align: center; padding: 20px; color: #888;"><div class="spinner"></div>Loading videos...</div>';
+            
+            fetch('/api/video/list')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        let html = '';
+                        if (data.videos.length === 0) {
+                            html = '<div style="text-align: center; padding: 20px; color: #888;">No video files found</div>';
+                        } else {
+                            data.videos.forEach(video => {
+                                html += `
+                                    <div class="video-item ${video.is_current ? 'current' : ''}" 
+                                         onclick="selectVideo('${video.path}')">
+                                        <div class="video-info">
+                                            <div class="video-name">${video.name}</div>
+                                            <div class="video-details">${video.path}</div>
+                                        </div>
+                                        <div class="video-size">${video.size_mb} MB</div>
+                                    </div>
+                                `;
+                            });
+                        }
+                        document.getElementById('videoList').innerHTML = html;
+                    } else {
+                        document.getElementById('videoList').innerHTML = 
+                            '<div style="text-align: center; padding: 20px; color: #f44;">Error loading videos: ' + data.error + '</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading video list:', error);
+                    document.getElementById('videoList').innerHTML = 
+                        '<div style="text-align: center; padding: 20px; color: #f44;">Error loading videos</div>';
+                });
+        }
+
+        function selectVideo(videoPath) {
+            if (confirm(`Change video to: ${videoPath}?`)) {
+                document.getElementById('videoList').innerHTML = 
+                    '<div style="text-align: center; padding: 20px; color: #888;"><div class="spinner"></div>Changing video...</div>';
+                
+                fetch('/api/video/change', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ video_path: videoPath })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ Video changed successfully!');
+                        closeVideoSelector();
+                        // Refresh stats to update video info
+                        updateStats();
+                    } else {
+                        alert('❌ Error changing video: ' + data.error);
+                        loadVideoList(); // Reload the list
+                    }
+                })
+                .catch(error => {
+                    console.error('Error changing video:', error);
+                    alert('❌ Error changing video: ' + error);
+                    loadVideoList(); // Reload the list
+                });
+            }
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('videoModal');
+            if (event.target === modal) {
+                closeVideoSelector();
+            }
+        }
+
+        // Update stats every second
+        setInterval(updateStats, 1000);
+        
+        // Initial stats load
+        updateStats();
+    </script>
+</body>
+</html> 
