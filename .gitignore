@@ -18,6 +18,11 @@ models/classification_model_best.pt
 models/detection_model_best.pt
 
 
+# Ignore all .pt files except specific ones
 *.pt
+# Allow specific model files
+!models/detection_model_yolo12s.pt
+!models/classification_model_yolo11s-cls_best.pt
+
 *.db
 results/
