@@ -125,7 +125,7 @@ services:
 
   # GPU Resource Monitor
   gpu-monitor:
-    image: nvidia/cuda:11.8-base-ubuntu22.04
+    image: nvidia/cuda:11.8.0-devel-ubuntu22.04
     container_name: dispatch-gpu-monitor
     profiles: ["monitoring"]
     command: ["nvidia-smi", "dmon", "-s", "pucvmet", "-d", "5"]
