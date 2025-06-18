@@ -17,8 +17,7 @@ models/detection_model_832_best.pt
 models/classification_model_best.pt
 models/detection_model_best.pt
 
-# Large model files
-models/
+
 *.pt
 *.db
 results/

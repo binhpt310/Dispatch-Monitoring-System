@@ -45,8 +45,8 @@ docker run --rm --gpus all nvidia/cuda:11.8-base nvidia-smi
 ### 2. Clone and Deploy
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd New_Dispatch_Monitoring_System
+git clone https://github.com/binhpt310/Dispatch-Monitoring-System
+cd Dispatch-Monitoring-System
 
 # Deploy the complete system
 docker-compose up -d
