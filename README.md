@@ -32,14 +32,7 @@ The Dispatch Monitoring System provides intelligent monitoring capabilities for 
 **Supported Operating Systems**:
 - Windows 10/11 with Docker Desktop
 - macOS 10.15+ with Docker Desktop  
-- Linux (Ubuntu 18.04+, CentOS 7+, etc.) with Docker Engine
-- ARM64 platforms (Apple Silicon M1/M2, Raspberry Pi 4+)
-
-**Hardware Requirements**:
-- 8GB+ RAM (16GB+ recommended for training)
-- 10GB+ free disk space (50GB+ for training datasets)
-- NVIDIA GPU (optional - automatic CPU fallback available)
-- Internet connection for downloading dependencies
+- Linux with Docker Engine
 
 ### <span style="color: #4682B4;">Installation and Setup</span>
 
@@ -215,9 +208,8 @@ The system is organized into specialized containerized services:
 - **dispatch-monitoring**: Main video streaming application with web interface
 - **training-detection**: Detection model training environment (640px images)
 - **training-classification**: Classification model training environment (224px images)
-- **database**: PostgreSQL database for storing feedback and analytics (optional)
-- **monitoring**: Grafana dashboard for system monitoring (optional)
-- **file-server**: Nginx server for model and result management (optional)
+- **database**: PostgreSQL database for storing feedback and analytics
+- **file-server**: Nginx server for model and result management
 
 ### <span style="color: #4682B4;">Core Components</span>
 
@@ -305,7 +297,7 @@ docker-compose logs dispatch-monitoring | grep "Using device"
 FORCE_CPU=true docker-compose up dispatch-monitoring
 
 # Verify GPU support
-docker run --rm --gpus all nvidia/cuda:11.8-base-ubuntu22.04 nvidia-smi
+docker run --rm --gpus all nvidia/cuda:11.8.0-devel-ubuntu22.04 nvidia-smi
 ```
 
 **Port Conflicts**:
@@ -323,5 +315,3 @@ ports:
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ---
-
-**Note**: This system is designed for production use in restaurant and food service environments. The detection model operates at 640px resolution and the classification model at 224px resolution for optimal performance and accuracy. 
