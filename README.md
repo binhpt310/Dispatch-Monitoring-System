@@ -24,47 +24,6 @@ The Dispatch Monitoring System provides intelligent monitoring capabilities for 
 - `dish_empty`, `dish_kakigori`, `dish_not_empty`
 - `tray_empty`, `tray_not_empty`, `tray_kakigori`
 
-## <span style="color: #2E8B57;">System Workflow</span>
-
-The following diagram illustrates the complete workflow from setup to operation:
-
-```mermaid
-graph TD
-    A[Start: Clone Repository] --> B[Run ./smart_start.sh]
-    B --> C{GPU Available?}
-    
-    C -->|Yes| D[Configure GPU Mode<br/>- Full resolution<br/>- Larger batches]
-    C -->|No| E[Configure CPU Mode<br/>- Optimized parameters<br/>- Smaller batches]
-    
-    D --> F[Build Docker Containers]
-    E --> F
-    F --> G[Launch dispatch-monitoring Service]
-    G --> H[Load Pre-trained Models<br/>- Detection: 640px<br/>- Classification: 224px]
-    H --> I[Web Interface Ready<br/>http://localhost:5002]
-    
-    I --> J{User Choice}
-    
-    J -->|Use Pre-trained| K[Upload Video]
-    K --> L[Real-time Processing<br/>- Object detection<br/>- Status classification]
-    L --> M[View Results<br/>- Bounding boxes<br/>- Class counts<br/>- Feedback system]
-    
-    J -->|Train Custom Models| N[Prepare Dataset<br/>Dataset/detection/<br/>Dataset/classification/]
-    N --> O[Start Training Services<br/>docker-compose --profile training]
-    O --> P{Model Type}
-    
-    P -->|Detection| Q[Train Detection Model<br/>- 640px images<br/>- dish/tray classes<br/>- YOLO format]
-    P -->|Classification| R[Train Classification Model<br/>- 224px images<br/>- 6 status classes<br/>- Folder structure]
-    
-    Q --> S[Save to results/ folder<br/>- Weights: best.pt, last.pt<br/>- Metrics and plots]
-    R --> S
-    
-    S --> T[Copy trained models<br/>to models/ folder]
-    T --> U[Update model paths<br/>in configuration]
-    U --> V[Restart Application<br/>docker-compose restart]
-    V --> I
-    
-    M --> W[Optional: Submit Feedback<br/>for model improvement]
-```
 
 ## <span style="color: #2E8B57;">Quick Start Guide</span>
 

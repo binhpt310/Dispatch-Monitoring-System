@@ -57,9 +57,6 @@ COPY . .
 # Create necessary directories
 RUN mkdir -p models results logs feedback
 
-# Download base YOLO models if not present
-RUN python3 -c "from ultralytics import YOLO; YOLO('yolo11m.pt'); YOLO('yolo11m-cls.pt')" || true
-
 # Set proper permissions
 RUN chmod +x run_video_streaming_app.py
 RUN chmod -R 755 /app

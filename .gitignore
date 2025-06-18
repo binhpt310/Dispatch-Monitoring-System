@@ -23,6 +23,7 @@ models/detection_model_best.pt
 # Allow specific model files
 !models/detection_model_yolo12s.pt
 !models/classification_model_yolo11s-cls_best.pt
-
+!yolo11s-cls.pt
+!yolo12s.pt
 *.db
 results/

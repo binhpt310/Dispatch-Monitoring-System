@@ -32,8 +32,6 @@ tqdm>=4.65.0
 tensorboard>=2.13.0
 wandb>=0.15.0
 
-# System and Threading
-threading-utils>=0.3.0
 
 # Development and Testing
 pytest>=7.4.0
