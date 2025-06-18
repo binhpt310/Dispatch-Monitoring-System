@@ -141,7 +141,7 @@ def main():
     print("=" * 60)
     
     # Check prerequisites
-    print("\n📋 Checking Prerequisites...")
+    print("\n-  Checking Prerequisites...")
     docker_ok = check_docker_running()
     compose_ok = check_docker_compose()
     
@@ -162,18 +162,18 @@ def main():
     check_container_status()
     
     # Check web interface
-    print("\n🌐 Checking Web Interface...")
+    print("\n-  Checking Web Interface...")
     web_ok = check_web_interface()
     
     # Check GPU support
-    print("\n🔧 Checking GPU Support...")
+    print("\n-  Checking GPU Support...")
     check_gpu_support()
     
     # Final summary
     print("\n" + "=" * 60)
     if web_ok:
         print_status("✨ DEPLOYMENT VALIDATION COMPLETED SUCCESSFULLY! ✨", "SUCCESS")
-        print("\n🎯 Access Points:")
+        print("\n-  Access Points:")
         print("  • Main Application: http://localhost:5002")
         print("  • Health Check: http://localhost:5002/health")
         print("  • System Status: http://localhost:5002/api/system/status")

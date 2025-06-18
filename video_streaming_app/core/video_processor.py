@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import time
 import threading
+import torch
 from pathlib import Path
 from ultralytics import YOLO
 
@@ -19,6 +20,10 @@ class VideoProcessor:
     
     def __init__(self):
         """Initialize video processor with configuration"""
+        # Device detection and configuration
+        self.device = self._detect_device()
+        print(f"- Using device: {self.device}")
+        
         # Model paths
         self.detection_model_path = Config.DETECTION_MODEL_PATH
         self.classification_model_path = Config.CLASSIFICATION_MODEL_PATH
@@ -69,38 +74,65 @@ class VideoProcessor:
             'tray_not_empty': 0
         }
     
-    def load_models(self):
-        """Load detection and classification models"""
+    def _detect_device(self):
+        """Detect available device (CUDA/CPU) and return appropriate device string"""
         try:
-            print("🔄 Loading models...")
+            # Check for forced CPU mode via environment variable
+            import os
+            if os.getenv('FORCE_CPU', '').lower() in ['true', '1', 'yes']:
+                print("- FORCE_CPU enabled - Using CPU mode")
+                return 'cpu'
+            
+            if torch.cuda.is_available():
+                gpu_count = torch.cuda.device_count()
+                gpu_name = torch.cuda.get_device_name(0) if gpu_count > 0 else "Unknown"
+                print(f"- CUDA available: {gpu_count} GPU(s) - Using {gpu_name}")
+                return 'cuda'
+            else:
+                print("- CUDA not available - Using CPU (slower inference)")
+                return 'cpu'
+        except Exception as e:
+            print(f"- Device detection error: {e} - Falling back to CPU")
+            return 'cpu'
+    
+    def load_models(self):
+        """Load detection and classification models with CPU/GPU support"""
+        try:
+            print("- Loading models...")
             
             # Load detection model
             if Path(self.detection_model_path).exists():
                 self.detection_model = YOLO(self.detection_model_path)
-                print(f"✅ Detection model loaded: {self.detection_model_path}")
+                # Move model to appropriate device
+                if hasattr(self.detection_model, 'model') and self.detection_model.model:
+                    self.detection_model.model = self.detection_model.model.to(self.device)
+                print(f"- Detection model loaded: {self.detection_model_path} ({self.device})")
             else:
-                print(f"❌ Detection model not found: {self.detection_model_path}")
+                print(f"- Detection model not found: {self.detection_model_path}")
                 return False
             
             # Load classification model  
             if Path(self.classification_model_path).exists():
                 self.classification_model = YOLO(self.classification_model_path)
-                print(f"✅ Classification model loaded: {self.classification_model_path}")
+                # Move model to appropriate device
+                if hasattr(self.classification_model, 'model') and self.classification_model.model:
+                    self.classification_model.model = self.classification_model.model.to(self.device)
+                print(f"- Classification model loaded: {self.classification_model_path} ({self.device})")
             else:
-                print(f"❌ Classification model not found: {self.classification_model_path}")
+                print(f"- Classification model not found: {self.classification_model_path}")
                 return False
             
             return True
             
         except Exception as e:
-            print(f"❌ Error loading models: {e}")
+            print(f"- Error loading models: {e}")
             return False
     
     def load_video(self):
         """Load video with robust error handling"""
         try:
             if not Path(self.video_path).exists():
-                print(f"❌ Video file not found: {self.video_path}")
+                print(f"- Video file not found: {self.video_path}")
                 return False
             
             # Release any existing capture
@@ -115,7 +147,7 @@ class VideoProcessor:
             self.cap.set(cv2.CAP_PROP_BUFFERSIZE, Config.BUFFER_SIZE)
             
             if not self.cap.isOpened():
-                print(f"❌ Cannot open video: {self.video_path}")
+                print(f"- Cannot open video: {self.video_path}")
                 return False
             
             # Get video properties
@@ -128,15 +160,15 @@ class VideoProcessor:
             self.video_fps = fps if fps > 0 else 30
             self.total_frames = frame_count
             
-            print(f"✅ Video loaded: {width}x{height}, {fps:.1f} FPS, {frame_count} frames")
+            print(f"- Video loaded: {width}x{height}, {fps:.1f} FPS, {frame_count} frames")
             return True
             
         except Exception as e:
-            print(f"❌ Error loading video: {e}")
+            print(f"- Error loading video: {e}")
             return False
     
     def process_frame_fast(self, frame):
-        """Ultra-fast frame processing with detection and classification"""
+        """Ultra-fast frame processing with detection and classification - CPU/GPU optimized"""
         try:
             start_time = time.time()
             
@@ -152,13 +184,17 @@ class VideoProcessor:
             # Extract inference region
             inference_region = frame[area_y1:area_y2, area_x1:area_x2]
             
+
+            imgsz = 640
+            half = False  # Can be enabled for newer GPUs
+            
             # Fast Detection on inference region only
             detection_results = self.detection_model(
                 inference_region,
                 conf=self.confidence_threshold,
                 verbose=False,
-                imgsz=640,
-                device='cuda',
+                imgsz=imgsz,
+                device=self.device,
                 half=False,
                 augment=False
             )
@@ -206,7 +242,7 @@ class VideoProcessor:
                                 conf=0.1,
                                 verbose=False,
                                 imgsz=224,
-                                device='cuda',
+                                device=self.device,
                                 half=False,
                                 augment=False
                             )
@@ -320,7 +356,7 @@ class VideoProcessor:
             return output_frame
             
         except Exception as e:
-            print(f"❌ Frame processing error: {e}")
+            print(f"- Frame processing error: {e}")
             return frame
     
     def video_stream_generator(self):
@@ -333,7 +369,7 @@ class VideoProcessor:
                 # Ensure video capture is properly initialized with thread safety
                 with self.cap_lock:
                     if not self.cap or not self.cap.isOpened():
-                        print("🔄 Reinitializing video capture...")
+                        print("- Reinitializing video capture...")
                         if self.cap:
                             self.cap.release()
                         time.sleep(0.1)
@@ -344,7 +380,7 @@ class VideoProcessor:
                             self.cap.set(cv2.CAP_PROP_BUFFERSIZE, Config.BUFFER_SIZE)
                         
                         if not self.cap.isOpened():
-                            print("❌ Failed to reopen video capture")
+                            print("- Failed to reopen video capture")
                             time.sleep(1)
                             continue
                 
@@ -358,7 +394,7 @@ class VideoProcessor:
                         self.target_frame = None
                         retry_count = 0
                     except Exception as e:
-                        print(f"⚠️ Seek error: {e}")
+                        print(f"- Seek error: {e}")
                         self.target_frame = None
                 
                 # Handle pause
@@ -378,12 +414,12 @@ class VideoProcessor:
                 if not ret:
                     retry_count += 1
                     if retry_count < max_retries:
-                        print(f"⚠️ Frame read failed, retry {retry_count}/{max_retries}")
+                        print(f"-  Frame read failed, retry {retry_count}/{max_retries}")
                         time.sleep(0.1)
                         continue
                     else:
                         # Loop video after max retries
-                        print("🔄 Looping video...")
+                        print("-  Looping video...")
                         with self.cap_lock:
                             if self.cap and self.cap.isOpened():
                                 self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
@@ -402,7 +438,7 @@ class VideoProcessor:
                     else:
                         processed_frame = frame
                 except Exception as e:
-                    print(f"⚠️ Frame processing error: {e}")
+                    print(f"-  Frame processing error: {e}")
                     processed_frame = frame
                 
                 # Update FPS
@@ -439,13 +475,13 @@ class VideoProcessor:
                                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
                     
                 except Exception as e:
-                    print(f"⚠️ Encoding error: {e}")
+                    print(f"-  Encoding error: {e}")
                 
                 # Small delay to prevent overload
                 time.sleep(Config.FRAME_DELAY)
                 
             except Exception as e:
-                print(f"❌ Video stream error: {e}")
+                print(f"-  Video stream error: {e}")
                 time.sleep(Config.RETRY_DELAY)
     
     def get_stats(self):
@@ -480,7 +516,7 @@ class VideoProcessor:
     
     def cleanup(self):
         """Clean up video resources"""
-        print("🧹 Cleaning up video resources...")
+        print("-  Cleaning up video resources...")
         self.running = False
         
         with self.cap_lock:
@@ -488,4 +524,4 @@ class VideoProcessor:
                 self.cap.release()
                 self.cap = None
         
-        print("✅ Video cleanup completed") 
+        print("-  Video cleanup completed") 

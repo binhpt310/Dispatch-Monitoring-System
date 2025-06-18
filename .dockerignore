@@ -165,6 +165,9 @@ Dockerfile*
 docker-compose*.yml
 .dockerignore
 
+# Keep essential scripts
+!smart_start.sh
+
 # Training outputs that will be generated
 runs/
 wandb/

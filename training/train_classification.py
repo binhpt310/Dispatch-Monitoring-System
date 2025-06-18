@@ -27,14 +27,27 @@ class ClassificationTrainer:
         self.training_results = None
         self.class_names = []
         
-        # Configuration
+        # Device detection and configuration
+        self.device = self._detect_device()
+        print(f"-  Training device: {self.device}")
+        
+        # Configuration with CPU/GPU optimization
         self.epochs = 100
-        self.batch_size = 16
-        self.image_size = 224
         self.learning_rate = 0.001
-        self.device = 'auto'
-        self.workers = 8
         self.patience = 50
+        
+        # Optimize for device
+        if self.device == 'cpu':
+            # CPU optimized settings
+            self.batch_size = 8  # Smaller batch for CPU
+            self.image_size = 224  # Standard classification image size
+            self.workers = min(4, os.cpu_count())  # Limit workers on CPU
+            print("-   CPU mode: Using reduced batch size for better performance")
+        else:
+            # GPU optimized settings
+            self.batch_size = 16
+            self.image_size = 224  # Standard classification image size
+            self.workers = 8
         
         # Paths
         self.dataset_root = Path("Dataset/classification")
@@ -45,6 +58,30 @@ class ClassificationTrainer:
         self.validate_environment()
         self.prepare_dataset()
     
+    def _detect_device(self):
+        """Detect available device (CUDA/CPU) and return appropriate device string"""
+        try:
+            # Check for forced CPU mode via environment variable
+            if os.getenv('FORCE_CPU', '').lower() in ['true', '1', 'yes']:
+                cpu_count = os.cpu_count()
+                print(f"-  FORCE_CPU enabled - Using CPU mode ({cpu_count} cores)")
+                return 'cpu'
+            
+            if torch.cuda.is_available():
+                gpu_count = torch.cuda.device_count()
+                gpu_name = torch.cuda.get_device_name(0) if gpu_count > 0 else "Unknown"
+                total_memory = torch.cuda.get_device_properties(0).total_memory / 1e9
+                print(f"-  CUDA available: {gpu_count} GPU(s) - Using {gpu_name} ({total_memory:.1f}GB)")
+                return 'cuda'
+            else:
+                cpu_count = os.cpu_count()
+                print(f"-   CUDA not available - Using CPU ({cpu_count} cores)")
+                print("-  CPU training will be slower but still functional")
+                return 'cpu'
+        except Exception as e:
+            print(f"-   Device detection error: {e} - Falling back to CPU")
+            return 'cpu'
+    
     def generate_model_name(self) -> str:
         # Extract model name without extension
         base_name = Path(self.base_model).stem
@@ -52,29 +89,34 @@ class ClassificationTrainer:
         # Get current date in DDMMYYYY format
         current_date = datetime.now().strftime("%d%m%Y")
         
-        # Create dynamic name: classification_model_{base_name}_best_{epochs}_{date}
-        model_name = f"classification_model_{base_name}_best_{self.epochs}_{current_date}"
+        # Add device suffix for clarity
+        device_suffix = "gpu" if self.device == 'cuda' else "cpu"
+        
+        # Create dynamic name: classification_model_{base_name}_best_{epochs}_{device}_{date}
+        model_name = f"classification_model_{base_name}_best_{self.epochs}_{device_suffix}_{current_date}"
         
         return model_name
     
 
     def validate_environment(self):
-        print("🔍 Validating classification training environment...")
+        print("-  Validating classification training environment...")
         
-        # Check CUDA availability
-        if torch.cuda.is_available():
+        # Print device information
+        if self.device == 'cuda':
             gpu_count = torch.cuda.device_count()
-            print(f"✅ CUDA available with {gpu_count} GPU(s)")
+            print(f"-  CUDA available with {gpu_count} GPU(s)")
             for i in range(gpu_count):
                 gpu_name = torch.cuda.get_device_name(i)
                 gpu_memory = torch.cuda.get_device_properties(i).total_memory / 1e9
                 print(f"  GPU {i}: {gpu_name} ({gpu_memory:.1f}GB)")
         else:
-            print("⚠️  CUDA not available, using CPU")
+            cpu_count = os.cpu_count()
+            print(f"-  Using CPU with {cpu_count} cores")
+            print("⏰ Note: CPU training will take significantly longer than GPU training")
         
         # Check base model
         if not self.dataset_root.exists():
-            print(f"❌ Dataset root not found: {self.dataset_root}")
+            print(f"-  Dataset root not found: {self.dataset_root}")
             raise FileNotFoundError(f"Dataset root not found: {self.dataset_root}")
         
         # Validate classification dataset
@@ -82,12 +124,12 @@ class ClassificationTrainer:
         dataset_results = validator.validate_classification_dataset()
         
         if not dataset_results['valid']:
-            print("❌ Dataset validation failed")
+            print("-  Dataset validation failed")
             for error in dataset_results['errors']:
                 print(f"  {error}")
             raise ValueError("Dataset validation failed")
         
-        print("✅ Environment validation completed")
+        print("-  Environment validation completed")
         return dataset_results
     
     def prepare_dataset(self):
@@ -153,15 +195,15 @@ class ClassificationTrainer:
         
         # Update dataset path
         self.prepared_dataset_path = yolo_dataset_dir
-        print(f"✅ Dataset prepared at: {self.prepared_dataset_path}")
+        print(f"-  Dataset prepared at: {self.prepared_dataset_path}")
     
     def initialize_model(self):
-        print("🚀 Initializing YOLO11m-cls classification model...")
+        print(f"-  Initializing {self.base_model} classification model...")
         
         try:
             # Load base model
             self.model = YOLO(self.base_model)
-            print(f"✅ Loaded base model: {self.base_model}")
+            print(f"-  Loaded base model: {self.base_model}")
             
             # Print model info
             model_info = self.model.info()
@@ -169,11 +211,11 @@ class ClassificationTrainer:
                 print(f"Model parameters: {model_info}")
             
         except Exception as e:
-            print(f"❌ Failed to initialize model: {e}")
+            print(f"-  Failed to initialize model: {e}")
             raise
     
     def train(self, resume: bool = False) -> Dict:
-        print("🎯 Starting classification model training...")
+        print("-  Starting classification model training...")
         
         if self.model is None:
             self.initialize_model()
@@ -200,7 +242,7 @@ class ClassificationTrainer:
             'resume': resume,
         }
         
-        print("📋 Training configuration:")
+        print("-  Training configuration:")
         for key, value in train_args.items():
             print(f"  {key}: {value}")
         
@@ -212,7 +254,7 @@ class ClassificationTrainer:
             self.training_results = self.model.train(**train_args)
             
             training_time = time.time() - start_time
-            print(f"✅ Training completed in {training_time:.2f} seconds")
+            print(f"-  Training completed in {training_time:.2f} seconds")
             
             # Save the best model
             self.save_best_model()
@@ -223,7 +265,7 @@ class ClassificationTrainer:
             return training_report
             
         except Exception as e:
-            print(f"❌ Training failed: {e}")
+            print(f"-  Training failed: {e}")
             raise
     
     def save_best_model(self):
@@ -241,15 +283,15 @@ class ClassificationTrainer:
                 
                 shutil.copy2(best_model_path, saved_model_path)
                 
-                print(f"✅ Best model saved to: {saved_model_path}")
+                print(f"-  Best model saved to: {saved_model_path}")
             else:
-                print("⚠️  Best model not found in results")
+                print("-   Best model not found in results")
                 
         except Exception as e:
-            print(f"❌ Failed to save best model: {e}")
+            print(f"-  Failed to save best model: {e}")
     
     def generate_training_report(self, training_time: float) -> Dict:
-        print("📊 Generating classification training report...")
+        print("-  Generating classification training report...")
         try:
             # Load training results
             results_file = self.training_results.save_dir / "results.csv"
@@ -294,19 +336,19 @@ class ClassificationTrainer:
                     validation_metrics = self._validate_trained_model()
                     report['validation_metrics'] = validation_metrics
                 except Exception as e:
-                    print(f"⚠️  Could not run validation: {e}")
+                    print(f"-   Could not run validation: {e}")
                 
                 return report
                 
             else:
-                print("⚠️  Results file not found, generating basic report")
+                print("-   Results file not found, generating basic report")
                 return {
                     'training_time': training_time,
                     'status': 'completed_no_detailed_metrics'
                 }
                 
         except Exception as e:
-            print(f"❌ Failed to generate training report: {e}")
+            print(f"-  Failed to generate training report: {e}")
             return {
                 'training_time': training_time,
                 'status': 'completed_with_errors',
@@ -333,17 +375,17 @@ class ClassificationTrainer:
                 'accuracy_top5': float(val_results.top5) if hasattr(val_results, 'top5') else 0.0,
             }
             
-            print(f"✅ Validation completed - Top1: {validation_metrics['accuracy_top1']:.4f}")
+            print(f"-  Validation completed - Top1: {validation_metrics['accuracy_top1']:.4f}")
             
             return validation_metrics
             
         except Exception as e:
-            print(f"❌ Validation failed: {e}")
+            print(f"-  Validation failed: {e}")
             return {'error': str(e)}
     
     def create_training_plots(self, results_df: pd.DataFrame):
         try:
-            print("📊 Creating classification training visualization plots...")
+            print("-  Creating classification training visualization plots...")
             
             # Set style
             plt.style.use('seaborn-v0_8')
@@ -427,10 +469,10 @@ class ClassificationTrainer:
             plt.savefig(plot_path, dpi=300, bbox_inches='tight')
             plt.close()
             
-            print(f"✅ Training plots saved to: {plot_path}")
+            print(f"-  Training plots saved to: {plot_path}")
             
         except Exception as e:
-            print(f"❌ Failed to create training plots: {e}")
+            print(f"-  Failed to create training plots: {e}")
     
     @staticmethod
     def format_time(seconds: float) -> str:
@@ -447,7 +489,7 @@ class ClassificationTrainer:
 
 
 def main():
-    print("🚀 Starting Classification Model Training")
+    print("-  Starting Classification Model Training")
     print("=" * 50)
     
     try:
@@ -459,8 +501,8 @@ def main():
         
         results = trainer.train(resume=resume)
         
-        print("\n✅ Training completed successfully!")
-        print("📊 Final Results:")
+        print("\n-  Training completed successfully!")
+        print("-  Final Results:")
         if 'best_metrics' in results:
             for metric, value in results['best_metrics'].items():
                 print(f"  {metric}: {value:.4f}")
@@ -469,13 +511,14 @@ def main():
             print(f"  Number of classes: {results['num_classes']}")
             print(f"  Classes: {', '.join(results['class_names'])}")
         
-        print(f"\n💾 Best model saved to: models/classification_model_832_best.pt")
+        model_name = trainer.generate_model_name()
+        print(f"\n-  Best model saved to: models/{model_name}.pt")
         print(f"📁 Training results in: {trainer.results_dir}")
         
     except KeyboardInterrupt:
         print("\nTraining interrupted by user")
     except Exception as e:
-        print(f"\n❌ Training failed: {e}")
+        print(f"\n-  Training failed: {e}")
         sys.exit(1)
 
 

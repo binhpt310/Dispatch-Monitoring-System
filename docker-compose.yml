@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Main Video Streaming Application
+  # Main Video Streaming Application with automatic GPU/CPU detection
   dispatch-monitoring:
     build:
       context: .
@@ -15,18 +15,17 @@ services:
       - ./results:/app/results
       - ./Dataset:/app/Dataset
       - ./feedback.db:/app/feedback.db
-      - video-data:/app/videos
+      - ./testing_video.mp4:/app/testing_video.mp4:ro
     environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - CUDA_VISIBLE_DEVICES=0
       - PYTHONUNBUFFERED=1
     deploy:
       resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
         reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+          cpus: '2.0'
+          memory: 4G
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5002"]
@@ -37,7 +36,7 @@ services:
     networks:
       - dispatch-network
 
-  # Training Service for Detection Models
+  # Training Service for Detection Models with automatic GPU/CPU detection
   training-detection:
     build:
       context: .
@@ -51,21 +50,20 @@ services:
       - ./Dataset:/app/Dataset
       - training-cache:/app/.cache
     environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - CUDA_VISIBLE_DEVICES=0
       - PYTHONUNBUFFERED=1
     command: ["python", "training/train_detection.py"]
     deploy:
       resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
         reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+          cpus: '2.0'
+          memory: 4G
     networks:
       - dispatch-network
 
-  # Training Service for Classification Models
+  # Training Service for Classification Models with automatic GPU/CPU detection
   training-classification:
     build:
       context: .
@@ -79,17 +77,16 @@ services:
       - ./Dataset:/app/Dataset
       - training-cache:/app/.cache
     environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - CUDA_VISIBLE_DEVICES=0
       - PYTHONUNBUFFERED=1
     command: ["python", "training/train_classification.py"]
     deploy:
       resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
         reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+          cpus: '2.0'
+          memory: 4G
     networks:
       - dispatch-network
 
@@ -107,23 +104,6 @@ services:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
-    restart: unless-stopped
-    networks:
-      - dispatch-network
-
-  # Monitoring Service with Grafana
-  monitoring:
-    image: grafana/grafana:latest
-    container_name: dispatch-monitoring-dashboard
-    profiles: ["monitoring"]
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./monitoring/grafana:/etc/grafana/provisioning
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin123
-      - GF_USERS_ALLOW_SIGN_UP=false
     restart: unless-stopped
     networks:
       - dispatch-network
@@ -163,8 +143,6 @@ services:
 # Named volumes for persistent storage
 volumes:
   postgres-data:
-    driver: local
-  grafana-data:
     driver: local
   video-data:
     driver: local

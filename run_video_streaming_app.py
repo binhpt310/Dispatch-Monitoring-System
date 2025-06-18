@@ -31,11 +31,11 @@ def check_dependencies():
         from ultralytics import YOLO
         from flask import Flask
         import requests
-        print("✅ All dependencies are available")
+        print("-  All dependencies are available")
         return True
     except ImportError as e:
-        print(f"❌ Missing dependency: {e}")
-        print("💡 Please install required packages: pip install -r requirements.txt")
+        print(f"-  Missing dependency: {e}")
+        print("-  Please install required packages: pip install -r requirements.txt")
         return False
 
 def check_files():
@@ -50,17 +50,17 @@ def check_files():
         if not Path(file_path).exists():
             missing_files.append(file_path)
     if missing_files:
-        print("❌ Missing required files:")
+        print("-  Missing required files:")
         for file_path in missing_files:
             print(f"   • {file_path}")
         return False
-    print("✅ All required files are present")
+    print("-  All required files are present")
     return True
 
 class VideoStreamingApp:
     """Main application class for the video streaming system"""
     def __init__(self):
-        print("🚀 Initializing Video Streaming Application...")
+        print("-  Initializing Video Streaming Application...")
         self.video_processor = None
         self.feedback_manager = None
         self.flask_app = None
@@ -77,26 +77,26 @@ class VideoStreamingApp:
         if self.shutdown_called:
             print(f"\n🔴 Force exit requested...")
             os._exit(1)
-        print(f"\n🛑 Received signal {signum}, initiating graceful shutdown...")
+        print(f"\n-  Received signal {signum}, initiating graceful shutdown...")
         self.shutdown_requested = True
         self.shutdown()
         sys.exit(0)
     def initialize_components(self):
         try:
-            print("🔧 Initializing application components...")
-            print("📊 Initializing feedback manager...")
+            print("-  Initializing application components...")
+            print("-  Initializing feedback manager...")
             self.feedback_manager = FeedbackManager()
             print("🎥 Initializing video processor...")
             self.video_processor = VideoProcessor()
             print("🤖 Loading AI models...")
             if not self.video_processor.load_models():
-                print("❌ Failed to load models")
+                print("-  Failed to load models")
                 return False
             print("📹 Loading video file...")
             if not self.video_processor.load_video():
-                print("❌ Failed to load video")
+                print("-  Failed to load video")
                 return False
-            print("🌐 Initializing Flask web server...")
+            print("-  Initializing Flask web server...")
             # Set correct path for templates
             app_dir = Path(__file__).parent / "video_streaming_app"
             template_dir = app_dir / "templates"
@@ -118,10 +118,10 @@ class VideoStreamingApp:
                     os._exit(0)
             
             configure_routes(self.flask_app, self.video_processor, self.feedback_manager)
-            print("✅ All components initialized successfully!")
+            print("-  All components initialized successfully!")
             return True
         except Exception as e:
-            print(f"❌ Error initializing components: {e}")
+            print(f"-  Error initializing components: {e}")
             return False
     def start_video_processing(self):
         try:
@@ -133,20 +133,20 @@ class VideoStreamingApp:
                 name="VideoProcessingThread"
             )
             self.video_thread.start()
-            print("✅ Video processing started successfully!")
+            print("-  Video processing started successfully!")
             return True
         except Exception as e:
-            print(f"❌ Error starting video processing: {e}")
+            print(f"-  Error starting video processing: {e}")
             return False
     def _video_processing_loop(self):
-        print("🔄 Video processing loop started")
+        print("-  Video processing loop started")
         while self.video_processor.running and not self.shutdown_requested:
             try:
                 time.sleep(0.1)
             except Exception as e:
-                print(f"⚠️ Video processing loop error: {e}")
+                print(f"-  Video processing loop error: {e}")
                 time.sleep(1)
-        print("🔄 Video processing loop ended")
+        print("-  Video processing loop ended")
     def _flask_server_thread(self):
         """Run Flask server in a separate thread"""
         try:
@@ -159,11 +159,11 @@ class VideoStreamingApp:
             )
         except Exception as e:
             if not self.shutdown_requested:
-                print(f"❌ Error in Flask server: {e}")
+                print(f"-  Error in Flask server: {e}")
     
     def start_web_server(self):
         try:
-            print(f"🌐 Starting web server on {Config.HOST}:{Config.PORT}...")
+            print(f"-  Starting web server on {Config.HOST}:{Config.PORT}...")
             print(f"📡 Access the application at: http://{Config.HOST}:{Config.PORT}")
             
             # Start Flask server in a separate thread
@@ -179,7 +179,7 @@ class VideoStreamingApp:
                 time.sleep(0.1)
                 
         except Exception as e:
-            print(f"❌ Error starting web server: {e}")
+            print(f"-  Error starting web server: {e}")
             return False
     def run(self):
         try:
@@ -187,15 +187,15 @@ class VideoStreamingApp:
             print("🎬 VIDEO STREAMING APPLICATION")
             print("=" * 60)
             if not self.initialize_components():
-                print("❌ Failed to initialize application")
+                print("-  Failed to initialize application")
                 return False
             if not self.start_video_processing():
-                print("❌ Failed to start video processing")
+                print("-  Failed to start video processing")
                 return False
             self.running = True
             print("🎉 Application started successfully!")
             print("-" * 60)
-            print("📋 SYSTEM STATUS:")
+            print("-  SYSTEM STATUS:")
             print(f"   • Video: {self.video_processor.video_path}")
             print(f"   • Detection Model: {self.video_processor.detection_model_path}")
             print(f"   • Classification Model: {self.video_processor.classification_model_path}")
@@ -206,9 +206,9 @@ class VideoStreamingApp:
             print("=" * 60)
             self.start_web_server()
         except KeyboardInterrupt:
-            print("\n🛑 Keyboard interrupt received")
+            print("\n-  Keyboard interrupt received")
         except Exception as e:
-            print(f"❌ Application error: {e}")
+            print(f"-  Application error: {e}")
         finally:
             self.shutdown()
     def shutdown(self):
@@ -216,7 +216,7 @@ class VideoStreamingApp:
             return
         self.shutdown_called = True
         
-        print("\n🧹 Shutting down application...")
+        print("\n-  Shutting down application...")
         self.running = False
         self.shutdown_requested = True
         
@@ -229,20 +229,20 @@ class VideoStreamingApp:
             
             # Wait for video thread to finish
             if self.video_thread and self.video_thread.is_alive():
-                print("⏳ Waiting for video thread to finish...")
+                print("-  Waiting for video thread to finish...")
                 self.video_thread.join(timeout=3)
             
             # Shutdown Flask server
             if self.flask_thread and self.flask_thread.is_alive():
-                print("🌐 Stopping web server...")
+                print("-  Stopping web server...")
                 try:
                     requests.post(f'http://localhost:{Config.PORT}/shutdown', timeout=2)
                 except:
                     pass  # Server might already be down
                 
-            print("✅ Application shutdown completed")
+            print("-  Application shutdown completed")
         except Exception as e:
-            print(f"⚠️ Error during shutdown: {e}")
+            print(f"-  Error during shutdown: {e}")
         finally:
             # Ensure we exit
             print("👋 Goodbye!")
@@ -250,7 +250,7 @@ class VideoStreamingApp:
             os._exit(0)
 
 def main():
-    print("🔍 Checking system requirements...")
+    print("-  Checking system requirements...")
     if not check_dependencies():
         sys.exit(1)
     if not check_files():

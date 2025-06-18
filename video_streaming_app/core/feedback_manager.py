@@ -62,10 +62,10 @@ class FeedbackManager:
                 ''')
                 
                 conn.commit()
-                print(f"✅ Feedback database initialized: {self.db_path}")
+                print(f"Feedback database initialized: {self.db_path}")
                 
         except Exception as e:
-            print(f"❌ Error initializing feedback database: {e}")
+            print(f"Error initializing feedback database: {e}")
     
     def add_feedback(self, frame_number, feedback_type, feedback_text, 
                     rating=None, user_corrections=None, video_file=None,
@@ -94,11 +94,11 @@ class FeedbackManager:
                 conn.commit()
                 feedback_id = cursor.lastrowid
                 
-                print(f"✅ Feedback added successfully (ID: {feedback_id})")
+                print(f"Feedback added successfully (ID: {feedback_id})")
                 return feedback_id
                 
         except Exception as e:
-            print(f"❌ Error adding feedback: {e}")
+            print(f"Error adding feedback: {e}")
             return None
     
     def get_all_feedback(self, limit=100, offset=0, feedback_type=None):
@@ -146,7 +146,7 @@ class FeedbackManager:
                 return feedback_list
                 
         except Exception as e:
-            print(f"❌ Error retrieving feedback: {e}")
+            print(f"Error retrieving feedback: {e}")
             return []
     
     def get_feedback_stats(self):
@@ -186,7 +186,7 @@ class FeedbackManager:
                 }
                 
         except Exception as e:
-            print(f"❌ Error getting feedback stats: {e}")
+            print(f"Error getting feedback stats: {e}")
             return {
                 'total_feedback': 0,
                 'feedback_by_type': {},
@@ -203,14 +203,14 @@ class FeedbackManager:
                 conn.commit()
                 
                 if cursor.rowcount > 0:
-                    print(f"✅ Feedback {feedback_id} deleted successfully")
+                    print(f"Feedback {feedback_id} deleted successfully")
                     return True
                 else:
-                    print(f"⚠️ Feedback {feedback_id} not found")
+                    print(f"Feedback {feedback_id} not found")
                     return False
                     
         except Exception as e:
-            print(f"❌ Error deleting feedback: {e}")
+            print(f"Error deleting feedback: {e}")
             return False
     
     def cleanup_old_feedback(self, days_old=30):
@@ -225,11 +225,11 @@ class FeedbackManager:
                 conn.commit()
                 
                 deleted_count = cursor.rowcount
-                print(f"✅ Cleaned up {deleted_count} old feedback entries")
+                print(f"Cleaned up {deleted_count} old feedback entries")
                 return deleted_count
                 
         except Exception as e:
-            print(f"❌ Error cleaning up feedback: {e}")
+            print(f"Error cleaning up feedback: {e}")
             return 0
     
     def export_feedback_csv(self, output_file="feedback_export.csv"):
@@ -240,7 +240,7 @@ class FeedbackManager:
             feedback_data = self.get_all_feedback(limit=10000)  # Get all feedback
             
             if not feedback_data:
-                print("⚠️ No feedback data to export")
+                print("No feedback data to export")
                 return False
             
             with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
@@ -256,9 +256,9 @@ class FeedbackManager:
                 for feedback in feedback_data:
                     writer.writerow(feedback)
             
-            print(f"✅ Feedback exported to {output_file}")
+            print(f"Feedback exported to {output_file}")
             return True
             
         except Exception as e:
-            print(f"❌ Error exporting feedback: {e}")
+            print(f"Error exporting feedback: {e}")
             return False 

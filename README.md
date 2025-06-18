@@ -1,409 +1,368 @@
-# 🍽️ Dispatch Monitoring System
+# Dispatch Monitoring System
 
-A computer vision system for monitoring dish and tray status in restaurant/food service environments using YOLO11 detection and classification models.
+A real-time and high accuracy computer vision system for real-time monitoring of dish and tray status in restaurant and food service environments. Built with YOLO11 detection and classification models, featuring automatic GPU/CPU optimization and cross-platform Docker deployment.
 
-## 📋 System Overview
+## <span style="color: #2E8B57;">Project Overview</span>
 
-This system provides real-time monitoring of dishes and trays with two main components:
-- **Desktop Application**: Full-featured Tkinter GUI with advanced controls
-- **Web Application**: Browser-based interface with real-time processing
+The Dispatch Monitoring System provides intelligent monitoring capabilities for kitchen dispatch operations through:
 
-### 🎯 Detection Classes
-- **Detection Model**: `dish`, `tray` (2 classes)
-- **Classification Model**: `dish_empty`, `dish_kakigori`, `dish_not_empty`, `tray_empty`, `tray_not_empty`, `tray_kakigori` (6 classes)
+- **Real-time Video Processing**: Live analysis of dish and tray status with sub-second response times
+- **Dual-Model Architecture**: Combined detection and classification for comprehensive object analysis
+- **Web-Based Interface**: Modern, responsive web application accessible from any device
+- **Automatic Hardware Optimization**: Seamless GPU/CPU detection and performance tuning
+- **Cross-Platform Support**: Runs on Windows, macOS, Linux, and ARM64 platforms
+- **Training Pipeline**: Complete workflow for training custom models with your data
 
-## 🚀 Quick Start with Docker Compose
+## <span style="color: #2E8B57;">Demo</span>
 
-### Prerequisites
-- **Docker**: 20.10+ with GPU support
-- **Docker Compose**: 2.0+
-- **NVIDIA GPU**: With CUDA support (recommended)
-- **System**: 8GB+ RAM, 10GB+ storage
+![Demo Web Application](Demo_web_app_720p.gif)
 
-### 1. Docker Setup
-```bash
-# Install Docker (Ubuntu/Debian)
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER
+### <span style="color: #4682B4;">Detection Capabilities</span>
 
-# Install Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
+**Detection Model**: Identifies objects as `dish` or `tray` (2 classes) - trained at 640px resolution
+**Classification Model**: Categorizes objects by status (6 classes) - trained at 224px resolution:
+- `dish_empty`, `dish_kakigori`, `dish_not_empty`
+- `tray_empty`, `tray_not_empty`, `tray_kakigori`
 
-# Install NVIDIA Container Toolkit (for GPU support)
-distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
-curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
-sudo apt-get update && sudo apt-get install -y nvidia-docker2
-sudo systemctl restart docker
+## <span style="color: #2E8B57;">System Workflow</span>
 
-# Test GPU support
-docker run --rm --gpus all nvidia/cuda:11.8-base nvidia-smi
+The following diagram illustrates the complete workflow from setup to operation:
+
+```mermaid
+graph TD
+    A[Start: Clone Repository] --> B[Run ./smart_start.sh]
+    B --> C{GPU Available?}
+    
+    C -->|Yes| D[Configure GPU Mode<br/>- Full resolution<br/>- Larger batches]
+    C -->|No| E[Configure CPU Mode<br/>- Optimized parameters<br/>- Smaller batches]
+    
+    D --> F[Build Docker Containers]
+    E --> F
+    F --> G[Launch dispatch-monitoring Service]
+    G --> H[Load Pre-trained Models<br/>- Detection: 640px<br/>- Classification: 224px]
+    H --> I[Web Interface Ready<br/>http://localhost:5002]
+    
+    I --> J{User Choice}
+    
+    J -->|Use Pre-trained| K[Upload Video]
+    K --> L[Real-time Processing<br/>- Object detection<br/>- Status classification]
+    L --> M[View Results<br/>- Bounding boxes<br/>- Class counts<br/>- Feedback system]
+    
+    J -->|Train Custom Models| N[Prepare Dataset<br/>Dataset/detection/<br/>Dataset/classification/]
+    N --> O[Start Training Services<br/>docker-compose --profile training]
+    O --> P{Model Type}
+    
+    P -->|Detection| Q[Train Detection Model<br/>- 640px images<br/>- dish/tray classes<br/>- YOLO format]
+    P -->|Classification| R[Train Classification Model<br/>- 224px images<br/>- 6 status classes<br/>- Folder structure]
+    
+    Q --> S[Save to results/ folder<br/>- Weights: best.pt, last.pt<br/>- Metrics and plots]
+    R --> S
+    
+    S --> T[Copy trained models<br/>to models/ folder]
+    T --> U[Update model paths<br/>in configuration]
+    U --> V[Restart Application<br/>docker-compose restart]
+    V --> I
+    
+    M --> W[Optional: Submit Feedback<br/>for model improvement]
 ```
 
-### 2. Clone and Deploy
+## <span style="color: #2E8B57;">Quick Start Guide</span>
+
+### <span style="color: #4682B4;">Prerequisites</span>
+
+**Supported Operating Systems**:
+- Windows 10/11 with Docker Desktop
+- macOS 10.15+ with Docker Desktop  
+- Linux (Ubuntu 18.04+, CentOS 7+, etc.) with Docker Engine
+- ARM64 platforms (Apple Silicon M1/M2, Raspberry Pi 4+)
+
+**Hardware Requirements**:
+- 8GB+ RAM (16GB+ recommended for training)
+- 10GB+ free disk space (50GB+ for training datasets)
+- NVIDIA GPU (optional - automatic CPU fallback available)
+- Internet connection for downloading dependencies
+
+### <span style="color: #4682B4;">Installation and Setup</span>
+
+#### Option 1: Automatic Setup (Recommended)
+
 ```bash
 # Clone the repository
-git clone https://github.com/binhpt310/Dispatch-Monitoring-System
-cd Dispatch-Monitoring-System
+git clone https://github.com/your-repo/New_Dispatch_Monitoring_System
+cd New_Dispatch_Monitoring_System
 
-# Deploy the complete system
-docker-compose up -d
+# One-command setup with automatic hardware detection
+./smart_start.sh
 ```
 
-### 3. Choose Your Workflow
+This script automatically:
+1. Detects GPU support and Docker capabilities
+2. Configures optimal settings for your hardware
+3. Builds and starts the application
+4. Shows device detection results and access URLs
 
-#### Option A: Use Pre-trained Models (Quick Start)
+#### Option 2: Manual Setup
+
 ```bash
-# Web Application (recommended)
-docker-compose exec webapp python app.py
-# Access at: http://localhost:5000
+# Build and start the application
+docker-compose build
+docker-compose up -d dispatch-monitoring
 
-# Desktop Application
-docker-compose exec desktop python desktop_app.py
-# Requires X11 forwarding for GUI
+# Verify deployment
+python validate_deployment.py
+
+# Access the application at http://localhost:5002
 ```
 
-#### Option B: Train Models from Scratch
+### <span style="color: #4682B4;">Accessing the Application</span>
+
+After successful deployment:
+- **Main Application**: http://localhost:5002
+- **Health Check**: http://localhost:5002/health
+- **System Status**: http://localhost:5002/api/system/status
+
+## <span style="color: #2E8B57;">Training New Models</span>
+
+### <span style="color: #4682B4;">Dataset Preparation</span>
+
+Your dataset must be organized in the `Dataset/` directory (automatically mounted in Docker containers via `./Dataset:/app/Dataset` volume):
+
+**Detection Dataset Structure (YOLO format)**:
+```
+Dataset/
+  detection/
+    train/
+      images/        # Training images (.jpg, .png)
+      labels/        # YOLO format labels (.txt)
+    val/
+      images/        # Validation images
+      labels/        # Validation labels
+    dataset.yaml     # Dataset configuration file
+```
+
+**Classification Dataset Structure (folder-based)**:
+```
+Dataset/
+  classification/
+    dish/
+      empty/         # Empty dish images
+      kakigori/      # Kakigori dish images
+      not_empty/     # Non-empty dish images
+    tray/
+      empty/         # Empty tray images
+      not_empty/     # Non-empty tray images
+      kakigori/      # Kakigori tray images
+```
+
+### <span style="color: #4682B4;">Quick Training Setup</span>
+
 ```bash
-# Train detection model
-docker-compose exec training python training/train_detection.py
+# Train detection model (640px images, dish/tray classes)
+docker-compose --profile training up training-detection
 
-# Train classification model  
-docker-compose exec training python training/train_classification.py
-
-# High-resolution training
-docker-compose exec training python training/train_highres.py
+# Train classification model (224px images, 6 status classes)
+docker-compose --profile training up training-classification
 
 # Monitor training progress
-docker-compose logs -f training
+docker-compose logs -f training-detection
 ```
 
-## 🐳 Docker Services
+### <span style="color: #4682B4;">Custom Training Parameters</span>
 
-### Service Architecture
-```yaml
-services:
-  webapp:      # Web application with Flask
-  desktop:     # Desktop application with Tkinter
-  training:    # Model training environment
-  nginx:       # Reverse proxy (production)
-```
+Resume training from a checkpoint or train with custom parameters:
 
-### Container Features
-- **GPU Acceleration**: CUDA support in all containers
-- **Volume Mounting**: Persistent data storage
-- **Hot Reload**: Development mode with live updates
-- **Resource Limits**: Optimized memory and GPU usage
-
-## 🔧 Container-Based Training
-
-### Training in Containers
 ```bash
-# Start training container
-docker-compose up training
+# Access training container for custom parameters
+docker-compose exec training-detection bash
 
-# Interactive training session
-docker-compose exec training bash
+# Resume detection training from last checkpoint
+python training/train_detection.py --resume --weights results/detection_model_*/weights/last.pt
 
-# Custom training parameters
-docker-compose exec training python training/train_detection.py --epochs 50 --batch-size 8
+# Resume classification training from last checkpoint
+python training/train_classification.py --resume --weights results/classification_model_*/weights/last.pt
 
-# Monitor GPU usage
-docker-compose exec training nvidia-smi
+# Custom training with specific parameters
+python training/train_detection.py --epochs 100 --batch-size 16 --img-size 640
+python training/train_classification.py --epochs 100 --batch-size 16 --img-size 224
 ```
 
-### Training Data Setup
+## <span style="color: #2E8B57;">Changing Models</span>
+
+### <span style="color: #4682B4;">Using Your Trained Models</span>
+
+1. **Locate Your Models**: After training, models are saved in the `results/` directory
+2. **Copy to Models Directory**: Move the best performing model to the `models/` folder
+3. **Update Configuration**: Edit the model paths in your environment configuration
+4. **Restart Application**: The system will automatically load your new models
+
 ```bash
-# Mount your dataset
-# Edit docker-compose.yml to point to your dataset:
-volumes:
-  - ./your_dataset:/app/Dataset
-  - ./models:/app/models
-  - ./results:/app/results
+# Copy your trained models from results to models directory
+cp results/detection_model_*/weights/best.pt models/detection_model_yolo12s.pt
+cp results/classification_model_*/weights/best.pt models/classification_model_yolo11s-cls_best.pt
+
+# Update environment configuration (optional - create .env file)
+echo "DETECTION_MODEL_PATH=models/detection_model_yolo12s.pt" > .env
+echo "CLASSIFICATION_MODEL_PATH=models/classification_model_yolo11s-cls_best.pt" >> .env
+
+# Restart the application to load new models
+docker-compose restart dispatch-monitoring
 ```
 
-## 🌐 Web Application (Container)
+### <span style="color: #4682B4;">Model Validation</span>
 
-### Deployment
 ```bash
-# Start web service
-docker-compose up webapp
+# Validate your model deployment
+python validate_deployment.py
 
-# Production deployment
-docker-compose -f docker-compose.prod.yml up -d
-
-# Scale web service
-docker-compose up --scale webapp=3
+# Test model performance
+docker-compose exec dispatch-monitoring python -c "
+from video_streaming_app.core.video_processor import VideoProcessor
+processor = VideoProcessor()
+print('Models loaded successfully:', processor.load_models())
+"
 ```
 
-### Web Features in Container
-- **Background Model Loading**: Non-blocking startup
-- **Smart Caching**: 50-frame cache system
-- **Real-time Processing**: < 1 second video loading
-- **GPU Acceleration**: Automatic CUDA detection
-- **Volume Persistence**: Uploaded videos and results saved
+## <span style="color: #2E8B57;">System Architecture</span>
 
-### Access Points
-- **Web Interface**: http://localhost:5000
-- **API Endpoints**: http://localhost:5000/api/*
-- **Health Check**: http://localhost:5000/health
-
-## 🖥️ Desktop Application (Container)
-
-### X11 Forwarding Setup
-```bash
-# Linux - Enable X11 forwarding
-xhost +local:docker
-
-# Run desktop app with GUI
-docker-compose run --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix desktop python desktop_app.py
-
-# Alternative: VNC access
-docker-compose up desktop-vnc
-# Access via VNC viewer at localhost:5901
-```
-
-### Desktop Features in Container
-- **Full GUI**: Complete Tkinter interface
-- **GPU Processing**: CUDA acceleration
-- **File Access**: Mounted volumes for videos/results
-- **Real-time Inference**: Optimized performance
-
-## 📊 Container Monitoring
-
-### Health Checks
-```bash
-# Check all services
-docker-compose ps
-
-# View logs
-docker-compose logs webapp
-docker-compose logs training
-docker-compose logs desktop
-
-# Resource usage
-docker stats
-```
-
-### Performance Monitoring
-```bash
-# GPU usage across containers
-docker-compose exec webapp nvidia-smi
-docker-compose exec training nvidia-smi
-
-# Container resource limits
-docker-compose exec webapp cat /sys/fs/cgroup/memory/memory.limit_in_bytes
-```
-
-## 🔧 Development Mode
-
-### Local Development with Containers
-```bash
-# Development mode with hot reload
-docker-compose -f docker-compose.dev.yml up
-
-# Mount local code for development
-volumes:
-  - ./webapp:/app/webapp
-  - ./training:/app/training
-  - ./models:/app/models
-```
-
-### Debugging
-```bash
-# Interactive debugging
-docker-compose exec webapp bash
-docker-compose exec training python -m pdb training/train_detection.py
-
-# View container logs in real-time
-docker-compose logs -f --tail=100 webapp
-```
-
-## 📁 Container Volume Structure
+### <span style="color: #4682B4;">Project Structure</span>
 
 ```
 New_Dispatch_Monitoring_System/
-├── docker-compose.yml              # Main orchestration
-├── docker-compose.prod.yml         # Production config
-├── docker-compose.dev.yml          # Development config
-├── Dockerfile.webapp               # Web app container
-├── Dockerfile.desktop              # Desktop app container
-├── Dockerfile.training             # Training container
-├── models/                         # Mounted: Trained models
-├── Dataset/                        # Mounted: Training data
-├── results/                        # Mounted: Training outputs
-├── webapp/uploads/                 # Mounted: Uploaded videos
-└── logs/                          # Mounted: Container logs
+├── Dataset/                     # Training datasets (mounted in containers)
+│   ├── detection/              # YOLO detection dataset
+│   └── classification/         # Classification dataset
+├── models/                     # Trained model files
+│   ├── detection_model_yolo12s.pt
+│   └── classification_model_yolo11s-cls_best.pt
+├── results/                    # Training outputs and metrics
+├── training/                   # Training scripts
+│   ├── train_detection.py     # Detection model training
+│   └── train_classification.py # Classification model training
+├── video_streaming_app/        # Main web application
+│   ├── core/                  # Core processing modules
+│   ├── routes/                # API endpoints
+│   ├── templates/             # Web interface templates
+│   └── utils/                 # Utility functions
+├── docker-compose.yml         # Container orchestration
+├── Dockerfile                 # Container image definition
+├── smart_start.sh            # Intelligent startup script
+└── run_video_streaming_app.py # Application entry point
 ```
 
-## 🚀 Production Deployment
+### <span style="color: #4682B4;">Docker Services</span>
 
-### Production Configuration
+The system is organized into specialized containerized services:
+
+- **dispatch-monitoring**: Main video streaming application with web interface
+- **training-detection**: Detection model training environment (640px images)
+- **training-classification**: Classification model training environment (224px images)
+- **database**: PostgreSQL database for storing feedback and analytics (optional)
+- **monitoring**: Grafana dashboard for system monitoring (optional)
+- **file-server**: Nginx server for model and result management (optional)
+
+### <span style="color: #4682B4;">Core Components</span>
+
+**Video Streaming Application** (`video_streaming_app/`):
+- Real-time video processing with YOLO11 models
+- Web-based interface with responsive design
+- RESTful API for integration
+- Feedback system for model improvement
+- Automatic GPU/CPU detection and optimization
+
+**Training Pipeline** (`training/`):
+- Detection training: 640px images, YOLO format, dish/tray classes
+- Classification training: 224px images, folder structure, 6 status classes
+- Automatic device optimization (GPU/CPU)
+- Model checkpointing and resumption capabilities
+- Comprehensive metrics and visualization
+
+**Model Management**:
+- Pre-trained model loading and validation
+- Dynamic device assignment (CUDA/CPU)
+- Model switching and hot-reloading
+- Performance monitoring and optimization
+
+## <span style="color: #2E8B57;">Management Commands</span>
+
+### <span style="color: #4682B4;">Container Management</span>
+
 ```bash
-# Production deployment
-docker-compose -f docker-compose.prod.yml up -d
+# View service status
+docker-compose ps
 
-# With load balancer
-docker-compose -f docker-compose.prod.yml --scale webapp=3 up -d
+# View application logs
+docker-compose logs dispatch-monitoring
 
-# SSL/HTTPS setup
-# Edit docker-compose.prod.yml for SSL certificates
-```
+# Access container shell
+docker-compose exec dispatch-monitoring bash
 
-### Environment Variables
-```bash
-# Create .env file
-cat > .env << EOF
-CUDA_VISIBLE_DEVICES=0
-FLASK_ENV=production
-MODEL_PATH=/app/models
-UPLOAD_PATH=/app/uploads
-MAX_WORKERS=4
-EOF
-```
-
-## 🔍 Troubleshooting Containers
-
-### Common Issues
-```bash
-# GPU not available in container
-docker run --rm --gpus all nvidia/cuda:11.8-base nvidia-smi
-
-# Permission issues
-sudo chown -R $USER:$USER ./models ./results ./Dataset
-
-# Container memory issues
+# Stop services
 docker-compose down
-docker system prune -f
-docker-compose up -d
 
-# Port conflicts
-docker-compose down
-sudo netstat -tulpn | grep :5000
-docker-compose up -d
+# Complete cleanup with volumes
+docker-compose down -v
+
+# Scale services (if needed)
+docker-compose up --scale dispatch-monitoring=2
 ```
 
-### Container Logs
+### <span style="color: #4682B4;">Training Management</span>
+
 ```bash
-# All services
-docker-compose logs
+# Check training progress
+docker-compose logs -f training-detection
+docker-compose logs -f training-classification
 
-# Specific service
-docker-compose logs webapp
-docker-compose logs training
+# Stop training
+docker-compose stop training-detection
 
-# Follow logs
-docker-compose logs -f webapp
+# Resume training from checkpoint
+docker-compose exec training-detection python training/train_detection.py --resume
+
+# Access training results
+ls -la results/
 ```
 
-## 📈 Performance Optimization
+### <span style="color: #4682B4;">Troubleshooting</span>
 
-### Container Resource Limits
-```yaml
-# In docker-compose.yml
-services:
-  webapp:
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-          cpus: '2.0'
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-```
-
-### Scaling
+**Application Issues**:
 ```bash
-# Horizontal scaling
-docker-compose up --scale webapp=3
+# Check application logs
+docker-compose logs dispatch-monitoring
 
-# Load balancing with nginx
-docker-compose -f docker-compose.prod.yml up -d
+# Restart specific service
+docker-compose restart dispatch-monitoring
+
+# Rebuild containers
+docker-compose build --no-cache
 ```
 
-## 🛠️ Manual Installation (Alternative)
-
-<details>
-<summary>Click to expand manual installation (not recommended)</summary>
-
-### Prerequisites
-- Python 3.8+
-- CUDA-compatible GPU (recommended)
-- 8GB+ RAM
-- 2GB+ storage space
-
-### Environment Setup
+**Device Detection Issues**:
 ```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# or
-venv\Scripts\activate     # Windows
+# Check which device mode is being used
+docker-compose logs dispatch-monitoring | grep "Using device"
 
-# Install dependencies
-pip install -r requirements.txt
-pip install -r requirements_desktop.txt
+# Force CPU mode if needed
+FORCE_CPU=true docker-compose up dispatch-monitoring
+
+# Verify GPU support
+docker run --rm --gpus all nvidia/cuda:11.8-base-ubuntu22.04 nvidia-smi
 ```
 
-### Running Applications
+**Port Conflicts**:
 ```bash
-# Desktop application
-python desktop_app.py
+# Check port usage
+netstat -an | grep 5002
 
-# Web application
-python run_webapp.py
+# Change port in docker-compose.yml
+ports:
+  - "5003:5002"  # Use different external port
 ```
 
-</details>
+## <span style="color: #2E8B57;">License</span>
 
-## 🎮 Usage Guide
-
-### Container-Based Usage
-- **Web Interface**: Upload videos, adjust settings, view results
-- **Desktop GUI**: Full-featured interface with advanced controls
-- **Training**: Custom model training with your datasets
-- **API Access**: RESTful endpoints for integration
-
-### Key Features
-- **Real-time Processing**: < 1 second video loading
-- **GPU Acceleration**: Automatic CUDA detection
-- **Scalable**: Multi-container deployment
-- **Persistent**: Data saved across container restarts
-
-## 🤝 Contributing
-
-### Development Workflow
-```bash
-# Fork and clone
-git clone <your-fork>
-cd New_Dispatch_Monitoring_System
-
-# Development environment
-docker-compose -f docker-compose.dev.yml up -d
-
-# Make changes and test
-docker-compose exec webapp python -m pytest
-
-# Submit pull request
-```
-
-## 📄 License
-
-[Add your license information here]
-
-## 🆘 Support
-
-For issues and questions:
-1. Check container logs: `docker-compose logs`
-2. Verify GPU support: `docker run --rm --gpus all nvidia/cuda:11.8-base nvidia-smi`
-3. Review troubleshooting section
-4. Contact development team
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ---
 
-**Deployment Status**: 🐳 **Docker-First Architecture** | ✅ **Container Ready** | 🚀 **Production Scalable** 
+**Note**: This system is designed for production use in restaurant and food service environments. The detection model operates at 640px resolution and the classification model at 224px resolution for optimal performance and accuracy. 
