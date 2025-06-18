@@ -7,6 +7,7 @@ services:
       dockerfile: Dockerfile
     image: dispatch-monitoring:latest
     container_name: dispatch-monitoring-app
+    runtime: nvidia
     ports:
       - "5002:5002"
     volumes:
@@ -17,6 +18,7 @@ services:
       - ./testing_video.mp4:/app/testing_video.mp4:ro
     environment:
       - PYTHONUNBUFFERED=1
+      - NVIDIA_VISIBLE_DEVICES=all
     deploy:
       resources:
         limits:
@@ -25,6 +27,10 @@ services:
         reservations:
           cpus: '2.0'
           memory: 4G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5002"]
@@ -42,6 +48,7 @@ services:
       dockerfile: Dockerfile
     image: dispatch-monitoring:latest
     container_name: dispatch-training-detection
+    runtime: nvidia
     profiles: ["training"]
     volumes:
       - ./models:/app/models
@@ -50,6 +57,7 @@ services:
       - training-cache:/app/.cache
     environment:
       - PYTHONUNBUFFERED=1
+      - NVIDIA_VISIBLE_DEVICES=all
     command: ["python", "training/train_detection.py"]
     deploy:
       resources:
@@ -59,6 +67,10 @@ services:
         reservations:
           cpus: '2.0'
           memory: 4G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     networks:
       - dispatch-network
 
@@ -69,6 +81,7 @@ services:
       dockerfile: Dockerfile
     image: dispatch-monitoring:latest
     container_name: dispatch-training-classification
+    runtime: nvidia
     profiles: ["training"]
     volumes:
       - ./models:/app/models
@@ -77,6 +90,7 @@ services:
       - training-cache:/app/.cache
     environment:
       - PYTHONUNBUFFERED=1
+      - NVIDIA_VISIBLE_DEVICES=all
     command: ["python", "training/train_classification.py"]
     deploy:
       resources:
@@ -86,6 +100,10 @@ services:
         reservations:
           cpus: '2.0'
           memory: 4G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     networks:
       - dispatch-network
 

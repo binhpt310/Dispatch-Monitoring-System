@@ -23,79 +23,58 @@ check_gpu_support() {
     if docker info 2>/dev/null | grep -q nvidia; then
         echo "-  NVIDIA Docker runtime detected"
         
-        # Test if we can actually run a GPU container
-        if docker run --rm --gpus all nvidia/cuda:11.8-base-ubuntu22.04 nvidia-smi > /dev/null 2>&1; then
+        # Check if nvidia-smi is available on host
+        if command -v nvidia-smi > /dev/null 2>&1; then
+            echo "-  NVIDIA drivers detected on host:"
+            nvidia-smi --query-gpu=name,driver_version --format=csv,noheader 2>/dev/null || echo "    Could not query GPU details"
+        else
+            echo "-  NVIDIA drivers not found in PATH (this is common on Windows)"
+        fi
+        
+        # Test if we can actually run a GPU container with more detailed error reporting
+        echo "-  Testing GPU container access..."
+        if docker run --rm --gpus all nvidia/cuda:11.8.0-devel-ubuntu22.04 nvidia-smi > /tmp/gpu_test.log 2>&1; then
             echo "-  GPU access confirmed"
+            if [ -f /tmp/gpu_test.log ]; then
+                echo "-  GPU Details:"
+                cat /tmp/gpu_test.log | head -3 | sed 's/^/    /'
+                rm -f /tmp/gpu_test.log
+            fi
             return 0
         else
-            echo "-   GPU runtime available but GPU access failed"
+            echo "-  GPU runtime available but GPU access failed"
+            echo "-  Error details:"
+            if [ -f /tmp/gpu_test.log ]; then
+                cat /tmp/gpu_test.log | sed 's/^/    /' | head -10
+                rm -f /tmp/gpu_test.log
+            fi
+            echo ""
+            echo "-  Common solutions:"
+            echo "    1. Ensure NVIDIA drivers are installed on host"
+            echo "    2. Install NVIDIA Container Toolkit"
+            echo "    3. On Windows: Enable GPU support in Docker Desktop"
+            echo "    4. Restart Docker service after installing GPU support"
             return 1
         fi
     else
-        echo "-   NVIDIA Docker runtime not found"
+        echo "-  NVIDIA Docker runtime not found"
+        echo "-  To enable GPU support:"
+        echo "    1. Install NVIDIA Container Toolkit"
+        echo "    2. Configure Docker to use nvidia runtime"
+        echo "    3. Restart Docker service"
         return 1
     fi
 }
 
-# Function to start with GPU support
-start_with_gpu() {
-    echo "-  Starting with GPU support..."
-    
-    # Create temporary docker-compose override for GPU
-    cat > docker-compose.override.yml << EOF
-version: '3.8'
-services:
-  dispatch-monitoring:
-    runtime: nvidia
-    environment:
-      - PYTHONUNBUFFERED=1
-      - NVIDIA_VISIBLE_DEVICES=all
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-
-  training-detection:
-    runtime: nvidia
-    environment:
-      - PYTHONUNBUFFERED=1
-      - NVIDIA_VISIBLE_DEVICES=all
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-
-  training-classification:
-    runtime: nvidia
-    environment:
-      - PYTHONUNBUFFERED=1
-      - NVIDIA_VISIBLE_DEVICES=all
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-EOF
-
-    echo "-  GPU configuration applied"
-}
-
-# Function to start with CPU only
-start_with_cpu() {
-    echo "-  Starting with CPU-only mode..."
-    
-    # Remove any existing override file to ensure CPU mode
-    rm -f docker-compose.override.yml
-    
-    echo "-  CPU-only configuration applied"
+# Function to display GPU status
+display_gpu_status() {
+    if check_gpu_support; then
+        echo "-  GPU support detected - Application will use GPU acceleration"
+        echo "-  Your RTX 4060 will accelerate AI model inference"
+    else
+        echo "-  No GPU support - Application will fall back to CPU mode"
+        echo "-  Performance will be slower but functional"
+    fi
 }
 
 # Function to clean up any previous containers
@@ -150,23 +129,8 @@ start_application() {
 main() {
     check_docker
     cleanup_containers
-    
-    if check_gpu_support; then
-        echo "-  GPU support detected - Using GPU acceleration"
-        start_with_gpu
-    else
-        echo "-  No GPU support - Using CPU mode (slower but functional)"
-        start_with_cpu
-    fi
-    
+    display_gpu_status
     start_application
-    
-    # Cleanup the override file after successful start
-    if [ -f docker-compose.override.yml ]; then
-        echo ""
-        echo "-   GPU configuration file created. To remove GPU support, run:"
-        echo "   rm docker-compose.override.yml && docker-compose down && docker-compose up -d"
-    fi
 }
 
 # Run main function
